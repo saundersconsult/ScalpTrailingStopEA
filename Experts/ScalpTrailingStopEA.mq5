@@ -102,6 +102,10 @@ int hStoch = INVALID_HANDLE;
 double macdMain[], macdSignal[];
 double stochMain[], stochSignal[];
 
+//--- Entry signal tracking (prevent multiple entries on same signal)
+bool lastLongSignalProcessed = false;
+bool lastShortSignalProcessed = false;
+
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |
 //+------------------------------------------------------------------+
@@ -196,20 +200,37 @@ void OnTick()
 
    // Check for existing positions
    if(HasOpenPosition())
+   {
+      // Reset signal flags when position is open (prevents new entries while trading)
+      lastLongSignalProcessed = false;
+      lastShortSignalProcessed = false;
+      UpdateComment();
       return;
+   }
 
-   // Check for long entry signal
-   if(CheckLongSignal())
+   // Reset signals when no position is open (ready for new entry)
+   bool longSignal = CheckLongSignal();
+   bool shortSignal = CheckShortSignal();
+
+   // Only open if signal is new (not already processed)
+   if(longSignal && !lastLongSignalProcessed)
    {
       OpenLongPosition();
+      lastLongSignalProcessed = true;
+      lastShortSignalProcessed = false;
    }
-   // Check for short entry signal
-   else if(CheckShortSignal())
+   else if(shortSignal && !lastShortSignalProcessed)
    {
       OpenShortPosition();
+      lastShortSignalProcessed = true;
+      lastLongSignalProcessed = false;
    }
 
-   UpdateComment();
+   // Clear signal flags if signals are no longer active
+   if(!longSignal)
+      lastLongSignalProcessed = false;
+   if(!shortSignal)
+      lastShortSignalProcessed = false;
 }
 
 //+------------------------------------------------------------------+

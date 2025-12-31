@@ -584,7 +584,7 @@ double CalculateVolume(double entryPrice, double stopLoss)
    }
    
    // Ensure volume doesn't exceed available margin
-   double freeMargin = AccountInfoDouble(ACCOUNT_FREEMARGIN);
+   double freeMargin = AccountInfoDouble(ACCOUNT_MARGIN_FREE);
    double maxVolumeByMargin = (freeMargin / marginPerLot) * 0.95; // Use 95% to be safe
    volume = MathMin(volume, maxVolumeByMargin);
    

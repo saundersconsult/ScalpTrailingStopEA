@@ -253,10 +253,10 @@ bool CheckLongSignal()
       return false;
 
    // Stochastic was below 20 and has risen above it
-   if(stochMain[2] >= 20)
+   if(stochMain[2] >= 20)  // Previous bar must be below 20
       return false;
    
-   if(stochMain[1] <= 20)
+   if(stochMain[1] <= 20)  // Current bar must be above 20
       return false;
 
    return true;
@@ -272,10 +272,10 @@ bool CheckShortSignal()
       return false;
 
    // Stochastic was above 80 and has declined below it
-   if(stochMain[2] <= 80)
+   if(stochMain[2] <= 80)  // Previous bar must be above 80
       return false;
    
-   if(stochMain[1] >= 80)
+   if(stochMain[1] >= 80)  // Current bar must be below 80
       return false;
 
    return true;

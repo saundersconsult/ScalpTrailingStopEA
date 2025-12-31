@@ -289,6 +289,29 @@ void OpenLongPosition()
    double ask = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
    double stopLoss = GetLongStopLoss();
    double takeProfit = ask + (InpLongTakeProfit * _Point);
+   
+   // Get broker's minimum stop level
+   long stopLevel = SymbolInfoInteger(_Symbol, SYMBOL_TRADE_STOPS_LEVEL);
+   double minDistance = (stopLevel == 0 ? 10 : stopLevel) * _Point; // Minimum 10 points if broker allows 0
+   
+   // Validate and adjust stop loss distance
+   if(ask - stopLoss < minDistance)
+   {
+      stopLoss = ask - minDistance;
+      Print("Stop loss adjusted to meet broker requirements: ", stopLoss);
+   }
+   
+   // Validate and adjust take profit distance
+   if(takeProfit - ask < minDistance)
+   {
+      takeProfit = ask + minDistance;
+      Print("Take profit adjusted to meet broker requirements: ", takeProfit);
+   }
+   
+   // Normalize prices
+   stopLoss = NormalizeDouble(stopLoss, _Digits);
+   takeProfit = NormalizeDouble(takeProfit, _Digits);
+   
    double volume = CalculateVolume(ask, stopLoss);
 
    // Validate stop loss
@@ -318,7 +341,7 @@ void OpenLongPosition()
    }
    else
    {
-      Print("Failed to open long position. Error: ", GetLastError());
+      Print("Failed to open long position. Error: ", GetLastError(), " Retcode: ", result.retcode);
    }
 }
 
@@ -330,6 +353,29 @@ void OpenShortPosition()
    double bid = SymbolInfoDouble(_Symbol, SYMBOL_BID);
    double stopLoss = GetShortStopLoss();
    double takeProfit = bid - (InpShortTakeProfit * _Point);
+   
+   // Get broker's minimum stop level
+   long stopLevel = SymbolInfoInteger(_Symbol, SYMBOL_TRADE_STOPS_LEVEL);
+   double minDistance = (stopLevel == 0 ? 10 : stopLevel) * _Point; // Minimum 10 points if broker allows 0
+   
+   // Validate and adjust stop loss distance
+   if(stopLoss - bid < minDistance)
+   {
+      stopLoss = bid + minDistance;
+      Print("Stop loss adjusted to meet broker requirements: ", stopLoss);
+   }
+   
+   // Validate and adjust take profit distance
+   if(bid - takeProfit < minDistance)
+   {
+      takeProfit = bid - minDistance;
+      Print("Take profit adjusted to meet broker requirements: ", takeProfit);
+   }
+   
+   // Normalize prices
+   stopLoss = NormalizeDouble(stopLoss, _Digits);
+   takeProfit = NormalizeDouble(takeProfit, _Digits);
+   
    double volume = CalculateVolume(bid, stopLoss);
 
    // Validate stop loss
@@ -359,7 +405,7 @@ void OpenShortPosition()
    }
    else
    {
-      Print("Failed to open short position. Error: ", GetLastError());
+      Print("Failed to open short position. Error: ", GetLastError(), " Retcode: ", result.retcode);
    }
 }
 

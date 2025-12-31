@@ -539,34 +539,70 @@ bool ModifyPosition(ulong ticket, double newSL, double newTP)
 //+------------------------------------------------------------------+
 double CalculateVolume(double entryPrice, double stopLoss)
 {
-   double volume = InpLotSize;
-
    // If lot size is set to 0, calculate based on risk percentage
-   if(InpLotSize <= 0)
+   if(InpLotSize > 0)
    {
-      double accountValue = InpRiskOnBalance ? AccountInfoDouble(ACCOUNT_BALANCE) : AccountInfoDouble(ACCOUNT_EQUITY);
-      double riskAmount = accountValue * (InpRiskPercent / 100.0);
-      double stopLossPoints = MathAbs(entryPrice - stopLoss) / _Point;
-      double tickValue = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_VALUE);
+      // Use fixed lot size
+      double minVolume = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MIN);
+      double maxVolume = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MAX);
+      double volumeStep = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_STEP);
       
-      if(stopLossPoints > 0 && tickValue > 0)
-      {
-         volume = riskAmount / (stopLossPoints * tickValue);
-      }
-      else
-      {
-         volume = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MIN);
-      }
+      double volume = InpLotSize;
+      volume = MathMax(volume, minVolume);
+      volume = MathMin(volume, maxVolume);
+      volume = NormalizeDouble(volume / volumeStep, 0) * volumeStep;
+      
+      return volume;
    }
 
-   // Normalize and validate volume
+   // Risk-based position sizing
+   double accountValue = InpRiskOnBalance ? AccountInfoDouble(ACCOUNT_BALANCE) : AccountInfoDouble(ACCOUNT_EQUITY);
+   double riskAmount = accountValue * (InpRiskPercent / 100.0);
+   
+   // Calculate stop loss in points
+   double stopLossPoints = MathAbs(entryPrice - stopLoss) / _Point;
+   
+   // Get symbol specs
    double minVolume = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MIN);
    double maxVolume = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MAX);
    double volumeStep = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_STEP);
-
+   double contractSize = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_CONTRACT_SIZE);
+   
+   // Calculate margin required per lot
+   double marginPerLot = SymbolInfoDouble(_Symbol, SYMBOL_MARGIN_INITIAL);
+   if(marginPerLot <= 0)
+      marginPerLot = 10000; // Default for major pairs if not available
+   
+   // Calculate volume: volume = riskAmount / (stopLossPoints * pipValue)
+   // For most pairs: 1 lot = 100,000 units, so 1 pip = $10 for majors
+   double pipValue = (contractSize / 100000.0) * 10.0; // Rough estimate
+   
+   double volume = 0;
+   if(stopLossPoints > 0)
+   {
+      volume = riskAmount / (stopLossPoints * pipValue);
+   }
+   
+   // Ensure volume doesn't exceed available margin
+   double freeMargin = AccountInfoDouble(ACCOUNT_FREEMARGIN);
+   double maxVolumeByMargin = (freeMargin / marginPerLot) * 0.95; // Use 95% to be safe
+   volume = MathMin(volume, maxVolumeByMargin);
+   
+   // Ensure minimum volume
    volume = MathMax(volume, minVolume);
+   
+   // Cap at maximum
    volume = MathMin(volume, maxVolume);
+   
+   // Normalize to volume step
    volume = NormalizeDouble(volume / volumeStep, 0) * volumeStep;
+   
+   // Final safety check - ensure we have enough margin
+   if(volume * marginPerLot > freeMargin)
+   {
+      volume = minVolume; // Fall back to minimum if still too risky
+      Print("Volume reduced to minimum due to insufficient margin. Free Margin: ", freeMargin, " Required: ", volume * marginPerLot);
+   }
 
    return volume;
 }

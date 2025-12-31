@@ -57,6 +57,7 @@ input double InpSlippage = 0;                   // Slippage in pips (default 0)
 input ENUM_TIMEFRAMES InpTimeframe = PERIOD_M1; // Timeframe for analysis
 input string InpComment = "ScalpTrailingStopEA"; // Terminal comment (editable)
 input bool InpAllowAlgoTrading = true;          // Allow algorithmic trading (default true)
+input ENUM_ORDER_TYPE_FILLING InpOrderFilling = ORDER_FILLING_IOC; // Order filling mode (IOC=Immediate-or-Cancel, FOK=Fill-or-Kill)
 
 input group "=== POSITION SETTINGS ==="
 input double InpLongTakeProfit = 10;            // Long position take profit in points
@@ -334,6 +335,7 @@ void OpenLongPosition()
    request.deviation = (ulong)InpSlippage;
    request.comment = InpComment;
    request.magic = InpMagicNumber;
+   request.type_filling = InpOrderFilling;  // Set execution mode
 
    if(OrderSend(request, result))
    {
@@ -398,6 +400,7 @@ void OpenShortPosition()
    request.deviation = (ulong)InpSlippage;
    request.comment = InpComment;
    request.magic = InpMagicNumber;
+   request.type_filling = InpOrderFilling;  // Set execution mode
 
    if(OrderSend(request, result))
    {
